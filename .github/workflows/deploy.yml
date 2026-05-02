@@ -26,7 +26,7 @@ jobs:
 
       - name: Build and push Docker image
         run: |
-          docker build -t us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/cs4-repo/wpi-cs3-backend:${{ github.sha }} ./app/docker/build -f ./app/docker/build/backend.dockerfile
+          docker build -t us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/cs4-repo/wpi-cs3-backend:${{ github.sha }} ./docker/build -f ./docker/build/backend.dockerfile
           docker push us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/cs4-repo/wpi-cs3-backend:${{ github.sha }}
 
       - name: Deploy to Cloud Run
