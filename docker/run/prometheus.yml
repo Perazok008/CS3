@@ -1,0 +1,23 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'frontend'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['frontend:9090']
+
+  - job_name: 'backend'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['backend:8000']
+
+  - job_name: 'cadvisor'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['cadvisor:8080']
+
+  - job_name: 'node-exporter'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['node-exporter:9100']

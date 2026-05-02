@@ -1,0 +1,127 @@
+services:
+  backend:
+    image: perazok/wpi_cs3_backend:latest
+    container_name: g06_backend
+    environment:
+     HF_TOKEN: ${HF_TOKEN}
+    expose:
+      - '8000'
+    networks:
+      - g06_memory_net
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8000/health']
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  frontend:
+    image: perazok/wpi_cs3_frontend:latest
+    container_name: g06_frontend
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - '22040:7860'
+    networks:
+      - g06_memory_net
+    restart: unless-stopped
+
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: g06_ngrok
+    depends_on:
+      - frontend
+    command: http frontend:7860
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN}
+    ports:
+    - "22043:4040"
+    networks:
+      - g06_memory_net
+    restart: unless-stopped
+
+  ngrok-grafana:
+    image: ngrok/ngrok:latest
+    container_name: g06_ngrok_grafana
+    depends_on:
+      - grafana
+    command: http grafana:3000
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN_GRAFANA}
+    ports:
+      - "22045:4040"
+    networks:
+      - g06_memory_net
+    restart: unless-stopped
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: g06_cadvisor
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /dev/disk:/dev/disk:ro
+    networks:
+      - g06_memory_net
+    restart: unless-stopped
+
+  node-exporter:
+    image: quay.io/prometheus/node-exporter:latest
+    container_name: g06_node_exporter
+    command:
+      - --path.rootfs=/host
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
+    volumes:
+      - /:/host:ro
+    pid: host
+    networks:
+      - g06_memory_net
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: g06_prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - g06_prometheus_data:/prometheus
+    ports:
+      - '22042:9090'
+    depends_on:
+      - frontend
+      - backend
+      - cadvisor
+      - node-exporter
+    networks:
+      - g06_memory_net
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: g06_grafana
+    ports:
+      - "22044:3000"
+    volumes:
+      - g06_grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - g06_memory_net
+    restart: unless-stopped
+
+networks:
+  g06_memory_net:
+    driver: bridge
+
+volumes:
+  g06_prometheus_data:
+    driver: local
+  g06_grafana_data:
+    driver: local
